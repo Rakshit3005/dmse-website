@@ -27,11 +27,8 @@ export const bookSlot = (data: {
   requested_by: number;
   requested_to: number;
 }) => api.post('/equipment/book', data);
-export const requestReimbursement = (data: {
-  course_id: string;
-  detail: string;
-  current_desk: string;
-  requested_by: number;
-}) => api.post('/reimbursement/request', data);
+export const getBookings = () => api.get('/equipment/bookings');
+export const approveBooking = (bookingId: number) => api.post(`/equipment/approve/${bookingId}`);
+export const rejectBooking = (bookingId: number) => api.post(`/equipment/reject/${bookingId}`);
 
 export default api;

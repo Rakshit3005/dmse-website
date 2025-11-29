@@ -36,6 +36,7 @@ interface Lab {
 interface DecodedToken {
   id: number;
   privilege_level: string;
+  exp?: number;
 }
 
 interface BookingData {
@@ -61,7 +62,17 @@ export default function AvailabilityPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          throw new Error('No authentication token found. Please log in.');
+          router.push('/login');
+          return;
+        }
+        // Check if token is expired
+        const decoded: DecodedToken = jwtDecode(token);
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+          alert('Your session has expired. Please log in again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('userId');
+          router.push('/login');
+          return;
         }
         const headers = {
           'Content-Type': 'application/json',
@@ -94,7 +105,7 @@ export default function AvailabilityPage() {
       }
     };
     fetchData();
-  }, [labId, instrumentId]);
+  }, [labId, instrumentId, router]);
 
   // Handle booking click
   const handleBookClick = (date: string, timeSlot: string) => {
@@ -123,6 +134,14 @@ export default function AvailabilityPage() {
 
     try {
       const decoded: DecodedToken = jwtDecode(token);
+      // Check if token is expired
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        alert('Your session has expired. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        router.push('/login');
+        return;
+      }
       if (!decoded.id) throw new Error('Invalid token: User ID not found');
       const userId = decoded.id;
       const [startHour] = bookingData.timeSlot.split('-').map((t) => parseInt(t));

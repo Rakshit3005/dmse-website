@@ -334,3 +334,68 @@ exports.getSlotHistory = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch slot history: ' + err.message });
   }
 };
+
+exports.getAllBookings = async (req, res) => {
+  const user = req.user; // from authMiddleware
+  if (user.privilege_level !== 'admin') {
+    return res.status(403).json({ error: 'Admin privileges required.' });
+  }
+  try {
+    const bookings = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT sb.id, sb.lab_name, i.instrument_name, sb.slot, sb.status, sb.requested_by, sb.requested_to, u1.username as requested_by_username, u2.username as requested_to_username
+         FROM slot_bookings sb
+         JOIN instruments i ON sb.instrument_id = i.instrument_id
+         JOIN users u1 ON sb.requested_by = u1.id
+         JOIN users u2 ON sb.requested_to = u2.id
+         ORDER BY sb.id DESC`,
+        [],
+        (err, rows) => (err ? reject(err) : resolve(rows))
+      );
+    });
+    res.json(bookings);
+  } catch (err) {
+    console.error('Error fetching all bookings:', err.message);
+    res.status(500).json({ error: 'Failed to fetch bookings: ' + err.message });
+  }
+};
+
+exports.approveBooking = async (req, res) => {
+  const { id } = req.params;
+  const user = req.user; // from authMiddleware
+  if (user.privilege_level !== 'admin') {
+    return res.status(403).json({ error: 'Admin privileges required.' });
+  }
+  try {
+    await new Promise((resolve, reject) => {
+      db.run(`UPDATE slot_bookings SET status = 'approved' WHERE id = ?`, [id], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+    res.json({ message: 'Booking approved' });
+  } catch (err) {
+    console.error('Error approving booking:', err.message);
+    res.status(500).json({ error: 'Failed to approve booking: ' + err.message });
+  }
+};
+
+exports.rejectBooking = async (req, res) => {
+  const { id } = req.params;
+  const user = req.user; // from authMiddleware
+  if (user.privilege_level !== 'admin') {
+    return res.status(403).json({ error: 'Admin privileges required.' });
+  }
+  try {
+    await new Promise((resolve, reject) => {
+      db.run(`UPDATE slot_bookings SET status = 'rejected' WHERE id = ?`, [id], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+    res.json({ message: 'Booking rejected' });
+  } catch (err) {
+    console.error('Error rejecting booking:', err.message);
+    res.status(500).json({ error: 'Failed to reject booking: ' + err.message });
+  }
+};

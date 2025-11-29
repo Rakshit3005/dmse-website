@@ -8,6 +8,7 @@ import { register, login } from '../../api'; // Import named exports
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -22,15 +23,26 @@ export default function LoginPage() {
 
     try {
       console.log(`Attempting ${isRegister ? 'Register' : 'Login'} with username: ${username}`);
-      const res = isRegister ? await register({ username, password, privilege_level: 'student' }) : await login({ username, password });
+      let privilege_level = 'student';
+      if (isRegister && adminPassword) {
+        if (adminPassword === 'admin@123') {
+          privilege_level = 'admin';
+        } else {
+          setError('Invalid admin password.');
+          return;
+        }
+      }
+      const res = isRegister ? await register({ username, password, privilege_level }) : await login({ username, password });
       console.log('API Response:', res.data);
-      const token = isRegister ? (await login({ username, password })).data.token : res.data.token;
+      const loginRes = isRegister ? await login({ username, password }) : res;
+      const token = loginRes.data.token;
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', token);
-        localStorage.setItem('userId', res.data.user.id);
+        localStorage.setItem('userId', loginRes.data.user.id);
         console.log('Token and userId stored in localStorage');
       }
       alert(isRegister ? 'Registration successful, logged in' : 'Login successful');
+      window.dispatchEvent(new Event('authChange'));
       router.push('/apply-reimbursements');
     } catch (err) {
       const errorMsg = (err as any).response?.data?.error || (err as any).message || 'Unknown error';
@@ -72,6 +84,21 @@ export default function LoginPage() {
               className="w-full border rounded px-4 py-2"
             />
           </div>
+          {isRegister && (
+            <div>
+              <label className="block text-lg font-semibold text-black mb-2" htmlFor="adminPassword">
+                Admin Password (optional):
+              </label>
+              <input
+                id="adminPassword"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Enter admin password to register as admin"
+                className="w-full border rounded px-4 py-2"
+              />
+            </div>
+          )}
           {error && <p className="text-red-500">{error}</p>}
           <div className="flex justify-between">
             <button type="submit" className="w-32 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">

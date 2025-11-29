@@ -137,7 +137,7 @@ export default function Page() {
               </tr>
             </thead>
             <tbody>
-              {slotHistory.history.map((group, groupIdx) => (
+              {slotHistory.history.map((group) => (
                 <React.Fragment key={group.date}>
                   <tr>
                     <td colSpan={7} className="bg-blue-100 text-blue-900 font-semibold py-2 px-3">
