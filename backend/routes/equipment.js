@@ -11,5 +11,6 @@ router.get('/slot-history', authMiddleware, equipmentController.getSlotHistory);
 router.get('/bookings', authMiddleware, equipmentController.getAllBookings);
 router.post('/approve/:id', authMiddleware, equipmentController.approveBooking);
 router.post('/reject/:id', authMiddleware, equipmentController.rejectBooking);
+router.post('/add-instrument', authMiddleware, equipmentController.addInstrument);
 
 module.exports = router;

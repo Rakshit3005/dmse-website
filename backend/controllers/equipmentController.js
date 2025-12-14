@@ -399,3 +399,66 @@ exports.rejectBooking = async (req, res) => {
     res.status(500).json({ error: 'Failed to reject booking: ' + err.message });
   }
 };
+
+exports.addInstrument = async (req, res) => {
+  const user = req.user; // from authMiddleware
+  const { lab_id, instrument_name, is_working, admin_password } = req.body;
+
+  // Verify admin privileges
+  if (user.privilege_level !== 'admin') {
+    return res.status(403).json({ error: 'Admin privileges required.' });
+  }
+
+  // Verify admin password
+  if (!admin_password || admin_password !== 'admin@123') {
+    return res.status(401).json({ error: 'Invalid admin password.' });
+  }
+
+  // Validate required fields
+  if (!lab_id || !instrument_name) {
+    return res.status(400).json({ error: 'lab_id and instrument_name are required.' });
+  }
+
+  try {
+    // Verify lab exists
+    const lab = await new Promise((resolve, reject) => {
+      db.get(`SELECT id, name FROM labs WHERE id = ?`, [lab_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    if (!lab) {
+      return res.status(400).json({ error: 'Lab not found.' });
+    }
+
+    // Set default value for is_working if not provided
+    const workingStatus = is_working !== undefined ? (is_working ? 1 : 0) : 1;
+
+    // Insert the new instrument
+    const instrumentId = await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO instruments (lab_id, instrument_name, is_working) VALUES (?, ?, ?)`,
+        [lab_id, instrument_name, workingStatus],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
+    });
+
+    res.status(201).json({
+      message: 'Instrument added successfully',
+      instrument: {
+        instrument_id: instrumentId,
+        lab_id: lab_id,
+        lab_name: lab.name,
+        instrument_name: instrument_name,
+        is_working: workingStatus
+      }
+    });
+  } catch (err) {
+    console.error('Error adding instrument:', err.message);
+    res.status(500).json({ error: 'Failed to add instrument: ' + err.message });
+  }
+};

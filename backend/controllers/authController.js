@@ -3,6 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
+// Fallback secret keeps local dev working even if JWT_SECRET isn't set.
+// Provide a strong JWT_SECRET in production to protect tokens.
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-12345';
+
 exports.register = (req, res) => {
   const { username, password, privilege_level } = req.body;
   if (!username || !password || !privilege_level) {
@@ -27,11 +31,9 @@ exports.login = (req, res) => {
     if (err || !user) return res.status(401).json({ error: 'Invalid credentials' });
     bcrypt.compare(password, user.userpassword, (err, isMatch) => {
       if (err || !isMatch) return res.status(401).json({ error: 'Invalid credentials' });
-      const token = jwt.sign(
-        { id: user.id, privilege_level: user.privilege_level },
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
+      const token = jwt.sign({ id: user.id, privilege_level: user.privilege_level }, JWT_SECRET, {
+        expiresIn: '1h'
+      });
       res.json({ token, user: { id: user.id, username, privilege_level: user.privilege_level } });
     });
   });
